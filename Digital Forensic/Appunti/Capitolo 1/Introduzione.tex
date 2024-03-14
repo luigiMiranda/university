@@ -44,7 +44,7 @@ Il processo di investigazione è un'analisi sistematica con l'obiettivo di ident
     \item How: Come è stato commesso.
 \end{itemize}
 
-\subsection{Evidence DynamicS}
+\subsection{Evidence Dynamics}
 \begin{figure}[h!]
     \includegraphics[width=\textwidth]{Capitolo 1/Figure/evidence-dynamic.png}
 \end{figure}
@@ -64,9 +64,54 @@ La keyword per la raccolta, interpretazione e presentazioni delle prove in tribu
 
 \subsection{Crimini e incidenti(sinistri)}
 La Digital Forensics è applicata sia in un contesto di diritto penale sia diritto civile. Per il diritto penale si parla di \textbf{crimini}; per il diritto civile si parla di \textbf{incidenti o sinistri.}
-    
+
+\subsection{Digital Devices, Media, and Objects}
+I Digital Devices sono dispositivi fisici come un laptop, uno smartphone o una macchina. Questi contengono una memoria di archiviazione che prende il nome di Digital Media. I Digital Media contengono dati in formato binario che prendono il nome di Digital Data. Un insieme strutturato di Digital Data prende nome di Digital Object.
+\begin{figure}[h!]
+    \includegraphics[width=\textwidth]{Capitolo 1/Figure/schema-digital-devices-media-object.png}
+\end{figure}
+
+\clearpage
+\subsection{Validità forense e principi fondamentali}
+\begin{figure}[h!]
+    \includegraphics[width=\textwidth]{Capitolo 1/Figure/forensic-solidità.png}
+\end{figure}
+
+Un'indagine forense risulta valida se rispetta gli standard e principi consolidati.
+I due principi fondamentali di un'indagine forense sono: \textit{\textbf{l'integrità delle prove (evidence integrity)} e \textbf{la catena di custodia (chain of custody).}}
+
+L'integrità delle prove si riferisce alla conservazione delle prove nella loro forma originale.
+Dato che garantire quest'integrità non è sempre possibile, è importante documentare scrupolosamente tutti gli step dell'investigazione, attraverso una catena di custodia.
+La catena di custodia si riferisce alla documentazione rigorosa dell'acquisizione, controllo, analisi e disposizione delle prove.
+
+\begin{figure}[h!]
+    \includegraphics[width=\textwidth]{Capitolo 1/Figure/evidence-integrity.png}
+\end{figure}
+
+\begin{figure}[h!]
+    \includegraphics[width=\textwidth]{Capitolo 1/Figure/chain-of-custody.png}
+\end{figure}
+
+\paragraph{Nota bene}
+Sarebbe utile evitare troppi passaggi di custodia e limitare l'accesso alle prove soprattutto da soggetti non autorizzati.
+
+\subsection{Ricostruzione del crimine nella Digital Forensics}
+Nella Digital Forensics la ricostruzione di un crimine si divide solitamente in 5 step:
+\begin{itemize}
+    \item Analisi delle prove
+    \item Classificare il ruolo di una prova come causa effetto di un evento
+    \item Costruire gli eventi e testare la validità
+    \item Combinare gli eventi per creare una catena
+    \item Testare le ipotesi con metodi scientifici
+\end{itemize}
 
 
+\section{Prove Digitali}
+\begin{figure}[h!]
+    \includegraphics[width=\textwidth]{Capitolo 1/Figure/digital-evidence.png}
+\end{figure}
+È importante conservare le prove digitali in modo da preservarne l'integrità e l'ammissibilità in tribunale.
 
-
-
+\subsection{Metadata}
+I Metadata contengono informazioni riguardo i Data Object. Ad esempio i Metadata associato ad una fotografia può contenere informazioni sul modello di macchina fotografica, sulla data, il luogo e su chi ha scattato la foto.
+Analizzare con attenzione i Metadata può portare alla scoperta di informazioni chiave utili nella risoluzione di un processo di investigazione forense.
