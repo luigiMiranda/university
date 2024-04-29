@@ -1,0 +1,45 @@
+\chapter{Nebula}
+Nebula è la prima macchina virtuale che studieremo in questo corso. Ci sono diversi livelli, noi affronteremo le sfide:
+\begin{itemize}
+    \item Nebula 00
+    \item Nebula 01
+    \item Nebula 02
+    \item Nebula 04
+    \item Nebula 07
+    \item Nebula 10
+    \item Nebula 13
+\end{itemize}
+La macchina virtuale è scaricabile dal sito \href{https://exploit.education/}{Exploit Education}.
+Le sfide di nebula trattano l'iniezione locale e remota di codice.
+
+Ogni macchina ha tre account:
+\begin{itemize}
+    \item \textcolor{red}{Giocatore}, un utente con il ruolo di attaccante che può accedere con la coppia di credenziali:
+    \begin{itemize}
+        \item username: levelN(N=00,01,02,ecc.)
+        \item password: levelN
+    \end{itemize}
+    \item \textcolor{red}{vittima}, chiamati flagN(N=00,01,ecc.) rappresentano la vittima e presentano diversi tipi di vulnerabilità
+    \item \textcolor{red}{Admin}, amministratore del sistema con credenziali:
+    \item \begin{itemize}
+        \item username: nebula
+        \item password: nebula
+    \end{itemize}
+\end{itemize}
+
+Noi accederemo sempre come utente levelN, con l'obiettivo di:
+\begin{itemize}
+    \item Elevare i privilegi
+    \item Ottenere informazioni sensibili
+\end{itemize}
+
+Raggiunto l'obiettivo, si cattura la bandierina, per questo motivo le sfide prendono il nome di CTF.
+
+\section{Level00}
+Dalla pagina ufficiale si legge:
+This level requires you to find a Set User ID program that will run as the “flag00” account.
+
+Quindi dobbiamo trovare un programma con il SETUID acceso che sarà eseguito come se fossimo flag00.
+
+Il primo passo e cercare nella directory principale tutti i programmi con il bit SETUID accesso. Usiamo quindi il comando \text
+
