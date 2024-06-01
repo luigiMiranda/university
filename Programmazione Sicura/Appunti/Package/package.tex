@@ -15,3 +15,38 @@
 \usepackage{hyperref}
 
 \usepackage{xcolor}
+
+\usepackage{listings}
+% Configurazione per i comandi di terminale
+\lstdefinestyle{bashstyle}{
+    language=bash,
+    basicstyle=\ttfamily\color{red}, % Imposta il colore del testo a rosso
+    keywordstyle=\color{red},
+    commentstyle=\color{green},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=none, % Rimuovi il riquadro
+}
+% Configurazione per il codice Python
+\lstdefinestyle{pythonstyle}{
+    language=Python,
+    basicstyle=\ttfamily\color{black}, % Imposta il colore del testo a nero
+    keywordstyle=\color{blue},
+    commentstyle=\color{green},
+    stringstyle=\color{red},
+    showstringspaces=false,
+    breaklines=true,
+    frame=none, % Rimuovi il riquadro
+}
+% Configurazione per il codice C
+\lstdefinestyle{cstyle}{
+    language=C,
+    basicstyle=\ttfamily\color{black}, % Imposta il colore del testo a nero
+    keywordstyle=\color{orange},
+    commentstyle=\color{green},
+    stringstyle=\color{blue},
+    showstringspaces=false,
+    breaklines=true,
+    frame=none, % Rimuovi il riquadro
+}
