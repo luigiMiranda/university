@@ -21,7 +21,7 @@ Ogni macchina ha tre account:
     \end{itemize}
     \item \textcolor{red}{vittima}, chiamati flagN(N=00,01,ecc.) rappresentano la vittima e presentano diversi tipi di vulnerabilità
     \item \textcolor{red}{Admin}, amministratore del sistema con credenziali:
-    \item \begin{itemize}
+    \begin{itemize}
         \item username: nebula
         \item password: nebula
     \end{itemize}
@@ -78,7 +78,7 @@ Analizziamo i metadati del file \textbf{flag01} con:
     ls -l
 \end{lstlisting}
 Si scopre che il file in questione è di proprietà di \textbf{flag01} e ha \textbf{SETUID} acceso.
-\subsection{Analisi sorgente}
+\subsection{Analisi del sorgente}
 \begin{itemize}
     \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a flag01) 
     \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a level01) 
@@ -181,7 +181,7 @@ Analizziamo i metadati del file \textbf{flag02} con:
 \end{lstlisting}
 Si scopre che il file in questione è di proprietà di \textbf{flag02} e ha \textbf{SETUID} acceso.
 
-\subsection{Analisi sorgente}
+\subsection{Analisi del sorgente}
 \begin{itemize}
     \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a \textbf{flag02}).
     \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a \textbf{level02}).
@@ -272,3 +272,98 @@ Vinciamo la sfida.
     \end{lstlisting}
 \end{enumerate}
 Quindi compiliamo e impostiamo i privilegi come per la prima mitigazione ed eseguiamo. La sfida non verrà vinta.
+
+% ------------------ 
+% NEBULA LEVEL13
+% ------------------ 
+\section{Level13}
+\subsection{Obiettivo}
+\begin{itemize}
+    \item Recupero della password (token) dell’utente \textbf{flag13}, aggirando il controllo di sicurezza del programma \textbf{/home/flag13/flag13}.
+    \item Autenticazione come utente \textbf{flag13}.
+    \item Esecuzione del programma \textbf{/bin/getflag} come utente \textbf{flag13}.
+\end{itemize}
+
+\subsection{Ispezione directory}
+Controlliamo le directory \textbf{/home/level13} e \textbf{/home/flag13}. Notiamo che \textbf{/home/flag13} contiene l’eseguibile \textbf{flag13}.
+Analizziamo i metadati del file \textbf{flag13} con: 
+\begin{lstlisting}[style=bashstyle]
+    ls -l
+\end{lstlisting}
+Si scopre che il file in questione è di proprietà di \textbf{flag13} e ha \textbf{SETUID} acceso.
+
+\subsection{Analisi del sorgente}
+Viene controllato se UID è diverso da 1000, e in tal caso si stampa un messaggio di errore e si esce dal programma.
+Altrimenti viene generato il token e viene stampato a video.
+
+\subsection{Idea per risolvere la sfida}
+Usando il comando \textbf{man environ}, scopriamo che alcune variabili di ambiente, tra cui \textbf{LD\_LIBRARY\_PATH}, \textbf{LD\_PRELOAD} possono influenzare il comportamento del linker dinamico, ovvero parte del SO che carica e linka le librerie condivise necessarie a un eseguibile a runtime. 
+Scopriamo che \textbf{LD\_PRELOAD} contiene un elenco di librerie condivise (shared object) separato da \textcolor{red}{:}
+
+In particolare \textbf{LD\_PRELOAD} viene utilizzata per ridefinire dinamicamente alcune funzioni (function overriding) senza dover ricompilare i sorgenti.
+Possiamo usare la variabile \textbf{LD\_PRELOAD} per caricare in anticipo una libreria condivisa che implementa la funzione del controllo degli accessi del programma \textbf{/home/flag13/flag13}. Questa libreria condivisa va scritta da zero, e in particolare, reimposta getuid() per superare il controllo degli accessi.
+
+Scriviamo il file \textbf{getuid.c}.
+Generiamo la libreria condivisa \textbf{getuid.so} con il comando: 
+\begin{lstlisting}[style=bashstyle]
+    gcc -shared -fPIC -o getuid.so getuid.c
+\end{lstlisting}
+
+\begin{itemize}
+    \item \textcolor{red}{-shared}: genera un oggetto linkabile a tempo di esecuzione e condivisibile con altri oggetti.
+    \item \textcolor{red}{-fPIC}: genera codice indipendente dalla posizione (Position Independent Code), rilocabile ad un indirizzo di memoria arbitrario.
+\end{itemize}
+
+Carichiamo in anticipo la libreria condivisa getuid.so modificando la variabile \textbf{LD\_PRELOAD} con il comando:
+\begin{lstlisting}[style=bashstyle]
+    export LD_PRELOAD=./getuid.so
+\end{lstlisting}
+Proviamo l'attacco ma fallisce, questo perché, se l'eseguibile è SETUID, deve esserlo anche la libreria condivisa.
+La soluzione è quella di rimuovere SETUID da flag13. Questo lo facciamo con una semplice copia tramite il comando:
+\begin{lstlisting}[style=bashstyle]
+    cp /home/flag13/flag13 /home/level13
+\end{lstlisting} 
+
+\subsection{Sintesi dei comandi da eseguire}
+\begin{lstlisting}[style=bashstyle]
+    # creiamo il file getuid.c
+    # compiliamo getuid.c
+    gcc -shared -fPIC -o getuid.so getuid.c
+    # carichiamo la nuova getuid.so
+    export LD_PRELOAD=./getuid.so
+    # copiamo flag13 per spegnere SETUID
+    cp /home/flag13/flag13 /home/level13
+    # eseguiamo flag13 dalla directory level13
+    /home/level13/flag13
+\end{lstlisting} 
+Otteniamo il token (esempio sulla mia macchina: b705702b-76a8-42b0-8844-3adabbe5ac58).
+Accediamo con il token come flag13, eseguiamo /bin/getflag e vinciamo la sfida.
+
+\subsection{Debolezze}
+\begin{itemize}
+    \item Privilegi di esecuzione ingiustamente elevati.
+    \item Versione di bash che non abbassa i privilegi di esecuzione.
+    \item Manipolazione di una variabile di ambiente (\textbf{LD\_PRELOAD}) per sostituire \textbf{getuid()} con una funzione che aggira il controllo di autenticazione.
+    \item Bypass dell'autenticazione tramite spoofing: L'attaccante può riprodurre il token di autenticazione di un altro utente.
+\end{itemize}
+\subsection{Mitigazioni}
+\begin{enumerate}
+    \item Spegnere bit SETUID:
+    \begin{itemize}
+        \item autenticarsi come root e avviare una shell con il comando: \begin{lstlisting}[style=bashstyle] 
+        sudo -i
+        \end{lstlisting}
+        \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
+        chmod u-s /home/flag01/flag01
+        \end{lstlisting}   
+        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+    \end{itemize}
+    \item Non ha senso ripulire la variabile LD\_PRELOAD come fatto per PATH in level01, perché LD\_PRELOAD agisce prima del caricamento del programma. Infatti nel momento in cui il processo esegue putenv() su LD\_PRELOAD, la funzione getuid() è già stata iniettata da tempo!
+    La mitigazione qui è banale, ovvero non rendere noto il valore 1000 all'attaccante.
+\end{enumerate}
+
+% ------------------ 
+% NEBULA LEVEL4
+% ------------------ 
+
+
