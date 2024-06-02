@@ -15,7 +15,7 @@ Per l'installazione:
 \end{itemize}
 Gli account a disposizione sono due:
     \begin{itemize}
-        \item \textbf{Giocatore}Giocatore: Un utente che intende partecipare alla sfida (simulando il ruolo dell’attaccante) si autentica con le credenziali seguenti
+        \item \textbf{Giocatore}Giocatore: Un utente che intende partecipare alla sfida (simulando il ruolo dell'attaccante) si autentica con le credenziali seguenti
         \begin{itemize}
             \item \textbf{Username}: user
             \item \textbf{Password}: user
@@ -32,7 +32,7 @@ Gli account a disposizione sono due:
         \item Modifica della memoria
         \item Esecuzione di codice arbitrario
     \end{itemize}
-\subsection{Informazioni utili}
+\section{Informazioni utili}
 \begin{itemize}
     \item La macchina protostar gira su architettura a 32bit
     \item Se gira su processore intel allora l'architettura è \textbf{Little Endian}
@@ -225,7 +225,7 @@ int main(int argc, char **argv)
 \end{lstlisting}
 
 \subsection{Obiettivo}
-L’obiettivo della sfida è impostare la variabile \textbf{modified} al valore \textbf{0x0d0a0d0a} a tempo di esecuzione.
+L'obiettivo della sfida è impostare la variabile \textbf{modified} al valore \textbf{0x0d0a0d0a} a tempo di esecuzione.
 
 \subsection{Analisi del sorgente}
 Analizzando il sorgente scopriamo che il programma stack2 accetta input locali, tramite una variabile di ambiente \textbf{(GREENIE)}.
@@ -408,12 +408,12 @@ A questo punto dobbiamo \textbf{disassemblare} il main() e capire cosa succede a
     (gdb) disassemble main
 \end{lstlisting}
 L'output è il seguente:
-\begin{figure}[h]
+\begin{figure}[ht]
     \includegraphics[width=\textwidth]{Capitolo 3/Figure/disas-main-stack4.png}
 \end{figure}
 
 Analizzando ogni singola istruzione capiamo che il layout dello stack è il seguente:
-\begin{figure}[h]
+\begin{figure}[ht]
     \includegraphics[width=\textwidth]{Capitolo 3/Figure/layout-stack4.png}
 \end{figure}
 \clearpage
@@ -503,14 +503,15 @@ A questo punto dobbiamo \textbf{disassemblare} il main() e capire cosa succede a
     (gdb) disassemble main
 \end{lstlisting}
 L'output è il seguente:
-\begin{figure}[h]
+\begin{figure}[ht]
     \includegraphics[width=\textwidth]{Capitolo 3/Figure/disas-main-stack5.png}
 \end{figure}
 
 Analizzando ogni singola istruzione capiamo che il layout dello stack è il seguente:
-\begin{figure}[h]
+\begin{figure}[ht]
     \includegraphics[width=\textwidth]{Capitolo 3/Figure/layout-stack5.png}
 \end{figure}
+
 \clearpage
 \textbf{N.B.}\begin{itemize}
     \item 28 byte sono per lo shellcode
@@ -597,6 +598,6 @@ Eseguendo così stack5 viene avviata una shell, che è una shell di root, quindi
         \end{lstlisting}   
         \item Eseguiamo stack5 e noteremo che l'attacco non va a buon fine. 
     \end{itemize}
-    \item Limitare la lunghezza massima dell'input destinato ad una variabile di lunghezza fissata. Ad esempio, ciò può essere fatto evitando l’utilizzo di \textbf{gets()} in favore di \textbf{fgets()}.
+    \item Limitare la lunghezza massima dell'input destinato ad una variabile di lunghezza fissata. Ad esempio, ciò può essere fatto evitando l'utilizzo di \textbf{gets()} in favore di \textbf{fgets()}.
     Eseguiamo stack5 e la sfida non verrà vinta.
 \end{enumerate}
