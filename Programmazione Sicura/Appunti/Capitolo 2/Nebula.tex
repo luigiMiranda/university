@@ -79,6 +79,26 @@ Analizziamo i metadati del file \textbf{flag01} con:
 \end{lstlisting}
 Si scopre che il file in questione è di proprietà di \textbf{flag01} e ha \textbf{SETUID} acceso.
 \subsection{Analisi del sorgente}
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  gid_t gid;
+  uid_t uid;
+  gid = getegid();
+  uid = geteuid();
+
+  setresgid(gid, gid, gid);
+  setresuid(uid, uid, uid);
+
+  system("/usr/bin/env echo and now what?");
+}
+\end{lstlisting}
 \begin{itemize}
     \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a flag01) 
     \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a level01) 
@@ -182,6 +202,34 @@ Analizziamo i metadati del file \textbf{flag02} con:
 Si scopre che il file in questione è di proprietà di \textbf{flag02} e ha \textbf{SETUID} acceso.
 
 \subsection{Analisi del sorgente}
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+
+int main(int argc, char **argv, char **envp)
+{
+    char *buffer;
+
+    gid_t gid;
+    uid_t uid;
+
+    gid = getegid();
+    uid = geteuid();
+
+    setresgid(gid, gid, gid);
+    setresuid(uid, uid, uid);
+
+    buffer = NULL;
+
+    asprintf(&buffer, "/bin/echo %s is cool", getenv("USER"));
+    printf("about to call system(\"%s\")\n", buffer);
+
+    system(buffer);
+}
+\end{lstlisting}
 \begin{itemize}
     \item Imposta tutti gli user ID al valore effettivo (elevazione dell’utente al valore associato a \textbf{flag02}).
     \item Imposta tutti i group ID al valore effettivo (elevazione del gruppo al valore associato a \textbf{level02}).
@@ -293,6 +341,32 @@ Analizziamo i metadati del file \textbf{flag13} con:
 Si scopre che il file in questione è di proprietà di \textbf{flag13} e ha \textbf{SETUID} acceso.
 
 \subsection{Analisi del sorgente}
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <string.h>
+
+#define FAKEUID 1000
+
+int main(int argc, char **argv, char **envp)
+{
+    int c;
+    char token[256];
+
+    if(getuid() != FAKEUID) {
+        printf("Security failure detected. UID %d started us, we expect %d\n", getuid(), FAKEUID);
+        printf("The system administrators will be notified of this violation\n");
+        exit(EXIT_FAILURE);
+    }
+
+    // snip, sorry :)
+
+    printf("your token is %s\n", token);
+
+}
+\end{lstlisting}
 Viene controllato se UID è diverso da 1000, e in tal caso si stampa un messaggio di errore e si esce dal programma.
 Altrimenti viene generato il token e viene stampato a video.
 
@@ -384,9 +458,43 @@ Si scopre che il file in questione è di proprietà di \textbf{flag04} e ha \tex
 Inoltre notiamo un file \textbf{token} a cui non possiamo accedere perché non abbiamo i permessi, poiché è leggibile ed eseguibile solo da flag04.
 
 \subsection{Analisi del sorgente}
-\begin{figure}[h]
-    \includegraphics[scale=1]{Capitolo 2/Figure/levle04.png}
-\end{figure}
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+int main(int argc, char **argv, char **envp)
+{
+  char buf[1024];
+  int fd, rc;
+
+  if(argc == 1) {
+      printf("%s [file to read]\n", argv[0]);
+      exit(EXIT_FAILURE);
+  }
+
+  if(strstr(argv[1], "token") != NULL) {
+      printf("You may not access '%s'\n", argv[1]);
+      exit(EXIT_FAILURE);
+  }
+
+  fd = open(argv[1], O_RDONLY);
+  if(fd == -1) {
+      err(EXIT_FAILURE, "Unable to open %s", argv[1]);
+  }
+
+  rc = read(fd, buf, sizeof(buf));
+  
+  if(rc == -1) {
+      err(EXIT_FAILURE, "Unable to read fd %d", fd);
+  }
+
+  write(1, buf, rc);
+}
+\end{lstlisting}
 \begin{itemize}
     \item Se il numero di argomenti è 1, il programma termina.
     \item Se il nome del file è \textbf{token}, il programma termina e stampa un messaggio di errore.
@@ -502,6 +610,81 @@ Il programma si aspetta due argomenti: il nome di un file e di un host. Come pri
 Non avendo i permessi per accedere a token, verrà stampato un messaggio di errore.
 
 \subsection{Analisi del sorgente}
+\begin{lstlisting}[style=cstyle]
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+
+int main(int argc, char **argv)
+{
+  char *file;
+  char *host;
+
+  if(argc < 3) {
+      printf("%s file host\n\tsends file to host if you have access to it\n", argv[0]);
+      exit(1);
+  }
+
+  file = argv[1];
+  host = argv[2];
+
+  if(access(argv[1], R_OK) == 0) {
+      int fd;
+      int ffd;
+      int rc;
+      struct sockaddr_in sin;
+      char buffer[4096];
+
+      printf("Connecting to %s:18211 .. ", host); fflush(stdout);
+
+      fd = socket(AF_INET, SOCK_STREAM, 0);
+
+      memset(&sin, 0, sizeof(struct sockaddr_in));
+      sin.sin_family = AF_INET;
+      sin.sin_addr.s_addr = inet_addr(host);
+      sin.sin_port = htons(18211);
+
+      if(connect(fd, (void *)&sin, sizeof(struct sockaddr_in)) == -1) {
+          printf("Unable to connect to host %s\n", host);
+          exit(EXIT_FAILURE);
+      }
+
+#define HITHERE ".oO Oo.\n"
+      if(write(fd, HITHERE, strlen(HITHERE)) == -1) {
+          printf("Unable to write banner to host %s\n", host);
+          exit(EXIT_FAILURE);
+      }
+#undef HITHERE
+
+      printf("Connected!\nSending file .. "); fflush(stdout);
+
+      ffd = open(file, O_RDONLY);
+      if(ffd == -1) {
+          printf("Damn. Unable to open file\n");
+          exit(EXIT_FAILURE);
+      }
+
+      rc = read(ffd, buffer, sizeof(buffer));
+      if(rc == -1) {
+          printf("Unable to read from file: %s\n", strerror(errno));
+          exit(EXIT_FAILURE);
+      }
+
+      write(fd, buffer, rc);
+
+      printf("wrote file!\n");
+
+  } else {
+      printf("You don't have access to %s\n", file);
+  }
+}
+\end{lstlisting}
 \begin{itemize}
     \item Se il numero di argomenti è minore di 3, il programma termina.
     \item Il primo parametro è il nome del file; il secondo è il nome dell'host.
@@ -650,6 +833,29 @@ Notiamo che index.cgi:
 \end{itemize}
 
 \subsection{Analisi del sorgente}
+\begin{lstlisting}[style=perlstyle]
+#!/usr/bin/perl
+
+use CGI qw{param};
+
+print "Content-type: text/html\n\n";
+
+sub ping {
+  $host = $_[0];
+
+  print("<html><head><title>Ping results</title></head><body><pre>");
+
+  @output = `ping -c 3 $host 2>&1`;
+  foreach $line (@output) { print "$line"; }
+
+  print("</pre></body></html>");
+  
+}
+
+# check if Host set. if not, display normal page, etc
+
+ping(param("Host"));
+\end{lstlisting}
 \begin{itemize}
     \item L'interprete dello script è PERL.
     \item Importa il modulo \textbf{CGI.pm}, contenente le funzioni di aiuto nella scrittura di uno script CGI.
