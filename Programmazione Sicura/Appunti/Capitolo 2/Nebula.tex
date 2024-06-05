@@ -161,7 +161,7 @@ Vinciamo la sfida.
         \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
         chmod u-s /home/flag01/flag01
         \end{lstlisting}   
-        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+        \item Eseguiamo flag01 e noteremo che l'attacco non va a buon fine. 
     \end{itemize}
     \item Modificare sorgente level01.c:
     \begin{itemize}
@@ -286,11 +286,11 @@ Vinciamo la sfida.
         sudo -i
         \end{lstlisting}
         \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
-        chmod u-s /home/flag01/flag01
+        chmod u-s /home/flag02/flag02
         \end{lstlisting}   
-        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+        \item Eseguiamo flag02 e noteremo che l'attacco non va a buon fine. 
     \end{itemize}
-    \item Ottenere username corrente con funzioni di libreria o sistema. Modifichiamo quindi il sorgente level02.c con la funzione di sistema\textbf{getlogin()}, che restituisce il puntatore ad una stringa contenete il nome dell’utente che sta lanciando il processo.
+    \item Ottenere username corrente con funzioni di libreria o sistema. Modifichiamo quindi il sorgente level02.c con la funzione di sistema \textbf{getlogin()}, che restituisce il puntatore ad una stringa contenete il nome dell'utente che sta lanciando il processo.
     \begin{lstlisting}[style=cstyle]
     char *username; 
     username=getlogin(); 
@@ -428,9 +428,9 @@ Accediamo con il token come flag13, eseguiamo /bin/getflag e vinciamo la sfida.
         sudo -i
         \end{lstlisting}
         \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
-        chmod u-s /home/flag01/flag01
+        chmod u-s /home/flag13/flag13
         \end{lstlisting}   
-        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+        \item Eseguiamo flag13 e noteremo che l'attacco non va a buon fine. 
     \end{itemize}
     \item Non ha senso ripulire la variabile LD\_PRELOAD come fatto per PATH in level01, perché LD\_PRELOAD agisce prima del caricamento del programma. Infatti nel momento in cui il processo esegue putenv() su LD\_PRELOAD, la funzione getuid() è già stata iniettata da tempo!
     La mitigazione qui è banale, ovvero non rendere noto il valore 1000 all'attaccante.
@@ -550,9 +550,9 @@ Accediamo con il token come ﬂag04, eseguiamo /bin/getﬂag e vinciamo la sfida
         sudo -i
         \end{lstlisting}
         \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
-        chmod u-s /home/flag01/flag01
+        chmod u-s /home/flag04/flag04
         \end{lstlisting}   
-        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+        \item Eseguiamo flag04 e noteremo che l’attacco non va a buon fine. 
     \end{itemize}
     \item La contromisura più ovvia consiste nel non salvare le credenziali di accesso di flag04 nel file token. I dati sensibili non vanno mai memorizzati in chiaro.
     \item Modifichiamo level04.c inserendo la seguente linea di codice:
@@ -770,11 +770,11 @@ Otteniamo il token sulla seconda macchina, lo usiamo per autenticarci come flag1
         sudo -i
         \end{lstlisting}
         \item spegnere SETUID con il comando: \begin{lstlisting}[style=bashstyle] 
-        chmod u-s /home/flag01/flag01
+        chmod u-s /home/flag10/flag10
         \end{lstlisting}   
-        \item Eseguiamo flag01 e noteremo che l’attacco non va a buon fine. 
+        \item Eseguiamo flag10 e noteremo che l'attacco non va a buon fine. 
     \end{itemize}
-    \item La contromisura più ovvia consiste nel non salvare le credenziali di accesso di flag04 nel file token. I dati sensibili non vanno mai memorizzati in chiaro.
+    \item La contromisura più ovvia consiste nel non salvare le credenziali di accesso di flag10 nel file token. I dati sensibili non vanno mai memorizzati in chiaro.
     \item Creiamo un nuovo file level10-mitigated.c ed effettuiamo due operazioni.
     \begin{itemize}
         \item Abbassiamo i privilegi prima della open con:
@@ -918,8 +918,7 @@ Tentiamo nuovamente l’attacco digitando il comando:
     /home/flag07/index.cgi "Host=8.8.8.8%3B%2Fbin%2Fgetflag"
 \end{lstlisting}
 L'iniezione locale ha successo ma non avendo i privilegi di flag07 non possiamo eseguire /bin/getflag.
-Bisogna identificare un server Web che esegua index.cgi SETUID flag07 
-Se un siffatto server esiste, l'input appena usato permette l'esecuzione di /bin/getflag con i privilegi di flag07 
+Bisogna identificare un server Web che esegua index.cgi SETUID flag07. Se un siffatto server esiste, l'input appena usato permette l'esecuzione di /bin/getflag con i privilegi di flag07 
 Si vince la sfida!
 
 Visualizziamo quindi i metadati di thttpd.conf, scopriamo che:
